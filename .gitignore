@@ -99,3 +99,8 @@ ENV/
 
 # mypy
 .mypy_cache/
+oauth.py
+troll_model.h5
+approved_senders.txt
+latest.log
+old_nginx_conf
