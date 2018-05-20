@@ -87,8 +87,8 @@ class BotStreamer(tweepy.StreamListener):
         if status_code == 420:
             logging.error("We are rate limited!")
             return True
-
-
+    def on_disconnect(self, error):
+        logging.warning("Disconnected from service!")
 
 application = app = Flask(__name__)
 now = datetime.datetime.now()
@@ -115,7 +115,7 @@ graph = tf.get_default_graph()
 logging.info("Load complete. Loading stream server.")
 botStreamListener = BotStreamer()
 stream = tweepy.Stream(auth, botStreamListener)
-stream.filter(track=['@Troll_Spotter'], async=True)
+stream.filter(track=['@Troll_Spotter'], async=True, stall_warnings=True)
 logging.info("Async thread creation complete!")
 
 logging.info("Listening for requests...")
@@ -162,7 +162,9 @@ def filterEmojis(s):
 
     
 def predict_scaled_tweet(tweet):
-    return model.predict(tweet)
+    predicted = model.predict(tweet)
+    logging.info("Predicted {0}".format(predicted))
+    return predicted
 def predict_scaled_tweet_threaded(tweet):
     with graph.as_default():
         return model.predict(tweet)
@@ -184,17 +186,20 @@ def vector():
     if validators.url(target):
         if "twitter" in get_tld(target):
             logging.info("Flagged " + target + " as a tweet.")
-            if api.rate_limit_status() >= 0:
-                final_target = get_tweet_raw_text(api, target)
-            else:
-                abort(420)
+            final_target = get_tweet_raw_text(api, target)
+            
+            #if api.rate_limit_status()['resources']['statuses']['statuses/lookup'] >= 0:
+            #else:
+            #    logging.error("We are rate limited!")
+            #    abort(420)
+            # removed this because rate_limit_status is a gigantic json object
         else:
             logging.error("A url was submitted " + target + " but it is not a TLD matching the API filter.")
             abort(406) #406 not accepted
     else:
         final_target = target
     tokenize_ravel_padded = tokenize_ravel_pad(final_target)
-    scaled = scale_tweet(processed)
+    scaled = scale_tweet(tokenize_ravel_padded)
     predicted = predict_scaled_tweet(scaled)
     return flask.jsonify(predicted.tolist())
 

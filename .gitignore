@@ -104,3 +104,5 @@ troll_model.h5
 approved_senders.txt
 latest.log
 old_nginx_conf
+model_150
+troll_model2.h5
